@@ -1,7 +1,6 @@
 if (!require(tidyverse)) {install.packages('tidyverse')}
 if (!require(irr)) {install.packages('irr')}
 
-setwd("\\\\ad.helsinki.fi/home/p/petjasjo/Desktop/EMA pilotti")
 EMAd <- read.csv2("survey_responses_4865.csv")
 
 colnames(EMAd)
