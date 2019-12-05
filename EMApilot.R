@@ -5,6 +5,7 @@ if (!require(lubridate)) {install.packages('lubridate')}
 if (!require(hms)) {install.packages('hms')}
 if (!require(ggstance)) {install.packages('ggstance')}
 
+
 EMAd <- read.csv2("survey_responses_4865.csv")
 
 colnames(EMAd)
@@ -140,7 +141,35 @@ EMAd.nm <- EMAd[EMAd$status != "Expired" & EMAd$status != "Blocked",]
 #EMAd.nm IS ATM THE MERGED FILE !!###########################################################
 #############################################################################################
 
-testi1 <- EMAd.nm %>%
+#Retrospective event assessment as timepoint
+
+EMA1 <- EMAd.nm
+
+EMA1$time <- as.POSIXlt(EMA1$time)
+EMA1$TimeSinceEvent <- EMA1$TimeSinceEvent * 60
+EMA1$newtime <- EMA1$time-EMA1$TimeSinceEvent
+
+EMA1r <- EMA1[c(1,11:33)]
+EMA1r <- filter(EMA1r, EMA1r$EventBOO == "Yes")
+
+oldnames <- c("Rvalence", "Rarousal", "Rdominance", "Rstress", "Rautonomy", "Rcompentece", "Rsocial", "newtime")
+newnames <- c("ISvalence", "ISarousal", "ISdominance", "ISstress", "ISautonomy", "IScompetence", "ISsocial", "time")
+
+EMA1r <- EMA1r %>% rename_at(vars(oldnames), ~ newnames)
+EMA1r$time <- as.POSIXct(EMA1r$time)
+EMA1$time <- as.POSIXct(EMA1$time)
+EMA1r$retro <- paste("retro")
+EMA1$retro <- paste("in.situ")
+EMA.merged <- full_join(EMA1, EMA1r)
+EMA.merged[EMA.merged$retro=="retro",]
+
+EMA.merged <- EMA.merged %>%
+  group_by(., ID) %>%
+  arrange(., time, .by_group=TRUE)
+
+#########################################
+
+testi1 <- EMA.merged %>%
   group_by(., ID) %>%
   mutate(TP = seq(1:length(ID)))
 
@@ -148,10 +177,10 @@ ok <- select(testi1, TP,retro)
 names(ok)[names(ok) == "TP"] <- "time"
 ok$time <- as.factor(ok$time)
 ok$ID <- recode(ok$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
-#ok$time <- factor(ok$time, levels = ok$time[1:23])
+ok$time <- factor(ok$time, levels = ok$time[1:23])
 
 
-testi12 <- select(testi1, ID, TP, ISvalence, ISarousal, ISdominance, retro)
+testi12 <- select(testi1, ID, TP, ISvalence, ISarousal, ISdominance, retro, day)
 
 #create dataframe where you can easily plot all variables from
 
@@ -162,6 +191,7 @@ ISaffect <- valence <- testi12 %>%
   select(., ID, TP, ISvalence) %>%
   spread(., TP, ISvalence) %>%
   gather(time, ISvalence, 2:24, factor_key=FALSE)
+
 #old 2:21
 
 
@@ -185,7 +215,7 @@ ISaffect$time <- factor(ISaffect$time, levels = ISaffect$time[1:23])
 ISaffectANNO <- full_join(ISaffect, ok)
 colnames(EMA.merged)[2] <- "timePOSIX"
 
-time.merge <- select(EMA.merged, ID, timePOSIX)
+time.merge <- select(EMA.merged, ID, timePOSIX, day)
 time.merge$ID <- recode(time.merge$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
 time.merge <- time.merge %>%
   group_by(., ID) %>%
@@ -195,9 +225,9 @@ time.merge$time <- as.factor(time.merge$time)
 ISaffectANNO <- left_join(ISaffectANNO, time.merge)
 
 
-pd <- position_jitter(0.1, 0.1)
+#pd <- position_jitter(0.1, 0.1)
 pd <- position_dodge(0.1)
-pd <- ggstance::position_dodgev(height = 0.2,)
+#pd <- ggstance::position_dodgev(height = 0.2,)
 
 ISaffectANNO <- drop_na(ISaffectANNO)
 ISaffectANNO$ISvalence.jittered <- jitter(ISaffectANNO$ISvalence, amount=0.05)
