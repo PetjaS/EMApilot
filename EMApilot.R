@@ -222,17 +222,19 @@ plot1 <- ggplot(ISaffectANNO, aes(x=time, y=ISvalence, color=ID))+
   theme(legend.position = "none")+
   geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=0)
 
-plot2 <- ggplot(ISaffect, aes(x=time, y=ISarousal, color=ID))+
+plot2 <- ggplot(ISaffectANNO, aes(x=time, y=ISarousal, color=ID))+
   geom_line(aes(group=ID), position=pd)+
   geom_point(position=pd)+
   ylim(-1,5) + 
-  theme(legend.position = "none") 
+  theme(legend.position = "none")+
+  geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=0)
 
-plot3 <- ggplot(ISaffect, aes(x=time, y=ISdominance, color=ID))+
+plot3 <- ggplot(ISaffectANNO, aes(x=time, y=ISdominance, color=ID))+
   geom_line(aes(group=ID), position=pd)+
   geom_point(position=pd)+
   ylim(-1,5)+
-  theme(legend.position = c(0.9,0.9))
+  theme(legend.position = c(0.9,0.9))+
+  geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=0)
 
 grid.arrange(plot1,plot2,plot3, ncol=3)
 
