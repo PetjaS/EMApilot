@@ -1,5 +1,9 @@
 if (!require(tidyverse)) {install.packages('tidyverse')}
 if (!require(irr)) {install.packages('irr')}
+if (!require(scales)) {install.packages('scales')}
+if (!require(lubridate)) {install.packages('lubridate')}
+if (!require(hms)) {install.packages('hms')}
+if (!require(ggstance)) {install.packages('ggstance')}
 
 EMAd <- read.csv2("survey_responses_4865.csv")
 
@@ -143,7 +147,8 @@ testi1 <- EMAd.nm %>%
 ok <- select(testi1, TP,retro)
 names(ok)[names(ok) == "TP"] <- "time"
 ok$time <- as.factor(ok$time)
-ok$time <- factor(ok$time, levels = ok$time[1:23])
+ok$ID <- recode(ok$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
+#ok$time <- factor(ok$time, levels = ok$time[1:23])
 
 
 testi12 <- select(testi1, ID, TP, ISvalence, ISarousal, ISdominance, retro)
@@ -178,13 +183,38 @@ ISaffect$time <- as.factor(ISaffect$time)
 ISaffect$time <- factor(ISaffect$time, levels = ISaffect$time[1:23])
 
 ISaffectANNO <- full_join(ISaffect, ok)
+colnames(EMA.merged)[2] <- "timePOSIX"
 
-ISaffectANNO <- merge(ISaffectANNO, EMA.merged$timePOSIX)
+time.merge <- select(EMA.merged, ID, timePOSIX)
+time.merge$ID <- recode(time.merge$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
+time.merge <- time.merge %>%
+  group_by(., ID) %>%
+  mutate(time = row_number())
+time.merge$time <- as.factor(time.merge$time)
 
-colnames(ISaffectANNO)[7] <- "timePOSIX"
+ISaffectANNO <- left_join(ISaffectANNO, time.merge)
+
 
 pd <- position_jitter(0.1, 0.1)
+pd <- position_dodge(0.1)
+pd <- ggstance::position_dodgev(height = 0.2,)
 
+ISaffectANNO <- drop_na(ISaffectANNO)
+ISaffectANNO$ISvalence.jittered <- jitter(ISaffectANNO$ISvalence, amount=0.05)
+
+plot1 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISvalence.jittered, color=ID)) +
+  geom_line(aes(group=ID))+
+  geom_point(aes(group=ID))+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(aspect.ratio = 0.9)
+
+
+geom_text(aes(label=hms::as.hms(timePOSIX)),hjust=0, vjust=0, size=3)
+scale_x_time(breaks = hms::as.hms(ISaffectANNO$timePOSIX), date_breaks())
+
+#problem: positioning fucks up lines and points  
+  
 plot1 <- ggplot(ISaffectANNO, aes(x=time, y=ISvalence, color=ID))+
   geom_line(aes(group=ID), position=pd)+
   geom_point(position=pd)+
