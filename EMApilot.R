@@ -4,6 +4,7 @@ if (!require(scales)) {install.packages('scales')}
 if (!require(lubridate)) {install.packages('lubridate')}
 if (!require(hms)) {install.packages('hms')}
 if (!require(ggstance)) {install.packages('ggstance')}
+if (!require(ggrepel)) {install.packages('ggrepel')}
 
 
 EMAd <- read.csv2("survey_responses_4865.csv")
@@ -158,7 +159,7 @@ newnames <- c("ISvalence", "ISarousal", "ISdominance", "ISstress", "ISautonomy",
 EMA1r <- EMA1r %>% rename_at(vars(oldnames), ~ newnames)
 EMA1r$time <- as.POSIXct(EMA1r$time)
 EMA1$time <- as.POSIXct(EMA1$time)
-EMA1r$retro <- paste("retro")
+EMA1r$retro <- paste("event")
 EMA1$retro <- paste("in.situ")
 EMA.merged <- full_join(EMA1, EMA1r)
 EMA.merged[EMA.merged$retro=="retro",]
@@ -230,20 +231,55 @@ pd <- position_dodge(0.1)
 #pd <- ggstance::position_dodgev(height = 0.2,)
 
 ISaffectANNO <- drop_na(ISaffectANNO)
-ISaffectANNO$ISvalence.jittered <- jitter(ISaffectANNO$ISvalence, amount=0.05)
+ISaffectANNO$ISvalence.jittered <- jitter(ISaffectANNO$ISvalence, amount=0)
+ISaffectANNO$ISarousal.jittered <- jitter(ISaffectANNO$ISarousal, amount=0.05)
+ISaffectANNO$ISdominance.jittered <- jitter(ISaffectANNO$ISdominance, amount=0.05)
+levels(ISaffectANNO$retro)
 
 plot1 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISvalence.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
   scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
   facet_grid(. ~ day, scales="free_x")+
-  theme(aspect.ratio = 0.9)
+  theme(aspect.ratio = 0.9, legend.position = c(0.90,0.15), legend.direction = "horizontal")+
+  geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
+                   aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
+                   nudge_y=0.2, nudge_x = 1000)+
+  ylim(-1,5)
+
+#2 data subsets to nudge_y over or under depending on y value??
+
+#geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=-.3)+
 
 
-geom_text(aes(label=hms::as.hms(timePOSIX)),hjust=0, vjust=0, size=3)
-scale_x_time(breaks = hms::as.hms(ISaffectANNO$timePOSIX), date_breaks())
+plot2 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISarousal.jittered, color=ID)) +
+  geom_line(aes(group=ID))+
+  geom_point(aes(group=ID))+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(aspect.ratio = 0.9, legend.position="none")+
+  geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
+                   aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
+                   nudge_y=0.2, nudge_x = 1000)+
+  ylim(-1,5)
 
-#problem: positioning fucks up lines and points  
+plot3 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISdominance.jittered, color=ID)) +
+  geom_line(aes(group=ID))+
+  geom_point(aes(group=ID))+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(aspect.ratio = 0.9, legend.position = "none")+
+  geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
+                   aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
+                   nudge_y=0.2, nudge_x = 1000)+
+  ylim(-1,5)
+
+grid.arrange(plot1,plot2,plot3, nrow=3)
+
+#geom_text(aes(label=hms::as.hms(timePOSIX)),hjust=0, vjust=0, size=3)
+#scale_x_time(breaks = hms::as.hms(ISaffectANNO$timePOSIX), date_breaks())
+
+##problem: positioning fucks up lines and points  
   
 plot1 <- ggplot(ISaffectANNO, aes(x=time, y=ISvalence, color=ID))+
   geom_line(aes(group=ID), position=pd)+
@@ -263,14 +299,11 @@ plot3 <- ggplot(ISaffectANNO, aes(x=time, y=ISdominance, color=ID))+
   geom_line(aes(group=ID), position=pd)+
   geom_point(position=pd)+
   ylim(-1,5)+
-  theme(legend.position = c(0.9,0.9))+
+  theme(legend.position = c(0.9,0.1))+
   geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=0)
 
 grid.arrange(plot1,plot2,plot3, ncol=3)
 
-
-rownames(testi12) <- paste("S", 1:6, sep="")
-testi121 <- testi12[,1:11]
 
 #per subject
 
@@ -285,6 +318,7 @@ plot1 <- ggplot(ISaff1, aes(x=time, y=value, color=variable))+
   geom_line(aes(group=variable), position=pd)+
   geom_point(aes(group=variable), position=pd) + 
   ylim(-1,5)+
+  theme(legend.position="none")+
   annotate("text", label = ISaff1$ID, x = 10, y = 5)
 
 ISaff2 <- filter(ISaffect, ID == "19427")
@@ -296,6 +330,7 @@ plot2 <- ggplot(ISaff2, aes(x=time, y=value, color=variable))+
   geom_line(aes(group=variable), position=pd)+
   geom_point(aes(group=variable), position=pd) + 
   ylim(-1,5)+
+  theme(legend.position="none")+
   annotate("text", label = ISaff2$ID, x = 10, y = 5)
 
 ISaff3 <- filter(ISaffect, ID == "19436")
@@ -307,6 +342,7 @@ plot3 <- ggplot(ISaff3, aes(x=time, y=value, color=variable))+
   geom_line(aes(group=variable), position=pd)+
   geom_point(aes(group=variable), position=pd) + 
   ylim(-1,5)+
+  theme(legend.position="none")+
   annotate("text", label = ISaff3$ID, x = 10, y = 5)
 
 ISaff4 <- filter(ISaffect, ID == "19444")
@@ -318,6 +354,7 @@ plot4 <- ggplot(ISaff4, aes(x=time, y=value, color=variable))+
   geom_line(aes(group=variable), position=pd)+
   geom_point(aes(group=variable), position=pd) + 
   ylim(-1,5)+
+  theme(legend.position="none")+
   annotate("text", label = ISaff4$ID, x = 10, y = 5)
 
 ISaff5 <- filter(ISaffect, ID == "19445")
@@ -329,6 +366,7 @@ plot5 <- ggplot(ISaff5, aes(x=time, y=value, color=variable))+
   geom_line(aes(group=variable), position=pd)+
   geom_point(aes(group=variable), position=pd) + 
   ylim(-1,5)+
+  theme(legend.position="none")+
   annotate("text", label = ISaff5$ID, x = 10, y = 5)
 
 ISaff6 <- filter(ISaffect, ID == "19453")
@@ -340,6 +378,7 @@ plot6 <- ggplot(ISaff6, aes(x=time, y=value, color=variable))+
   geom_line(aes(group=variable), position=pd)+
   geom_point(aes(group=variable), position=pd) + 
   ylim(-1,5)+
+  theme(legend.position=c(0.88,0.15))+
   annotate("text", label = ISaff6$ID, x = 10, y = 5)
 
 grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=3)
@@ -367,33 +406,7 @@ spread(testi1, time, ISvalence)
 
 ##### ADD RETROSPECTIVE TIMEPOINTS AS OBSERVATIONS ########
 
-EMA1 <- EMAd.nm
 
-EMA1$time <- as.POSIXlt(EMA1$time)
-EMA1$TimeSinceEvent <- EMA1$TimeSinceEvent * 60
-EMA1$newtime <- EMA1$time-EMA1$TimeSinceEvent
-
-EMA1r <- EMA1[c(1,11:33)]
-EMA1r <- filter(EMA1r, EMA1r$EventBOO == "Yes")
-
-oldnames <- c("Rvalence", "Rarousal", "Rdominance", "Rstress", "Rautonomy", "Rcompentece", "Rsocial", "newtime")
-newnames <- c("ISvalence", "ISarousal", "ISdominance", "ISstress", "ISautonomy", "IScompetence", "ISsocial", "time")
-
-EMA1r <- EMA1r %>% rename_at(vars(oldnames), ~ newnames)
-EMA1r$time <- as.POSIXct(EMA1r$time)
-EMA1$time <- as.POSIXct(EMA1$time)
-EMA1r$retro <- paste("retro")
-EMA1$retro <- paste("in.situ")
-EMA.merged <- full_join(EMA1, EMA1r)
-EMA.merged[EMA.merged$retro=="retro",]
-
-EMA.merged <- EMA.merged %>%
-  group_by(., ID) %>%
-  arrange(., time, .by_group=TRUE)
-
-########### LOOP BACK! -RENAME TO EMAd.nm FOR REMAKING THE PLOTS WITH THIS DATA
-
-EMAd.nm <- EMA.merged
 
 ############################ ROSKAKORI ###########################
 
@@ -438,4 +451,33 @@ ggplot(testi12w, aes(x=time, y=ISvalence, color=ID))+
   geom_line(aes(group=ID), position=pd)+
   geom_point(position=pd)
 
+
+### tarkkana alla olevan kanssa
+EMA1 <- EMAd.nm
+
+EMA1$time <- as.POSIXlt(EMA1$time)
+EMA1$TimeSinceEvent <- EMA1$TimeSinceEvent * 60
+EMA1$newtime <- EMA1$time-EMA1$TimeSinceEvent
+
+EMA1r <- EMA1[c(1,11:33)]
+EMA1r <- filter(EMA1r, EMA1r$EventBOO == "Yes")
+
+oldnames <- c("Rvalence", "Rarousal", "Rdominance", "Rstress", "Rautonomy", "Rcompentece", "Rsocial", "newtime")
+newnames <- c("ISvalence", "ISarousal", "ISdominance", "ISstress", "ISautonomy", "IScompetence", "ISsocial", "time")
+
+EMA1r <- EMA1r %>% rename_at(vars(oldnames), ~ newnames)
+EMA1r$time <- as.POSIXct(EMA1r$time)
+EMA1$time <- as.POSIXct(EMA1$time)
+EMA1r$retro <- paste("retro")
+EMA1$retro <- paste("in.situ")
+EMA.merged <- full_join(EMA1, EMA1r)
+EMA.merged[EMA.merged$retro=="retro",]
+
+EMA.merged <- EMA.merged %>%
+  group_by(., ID) %>%
+  arrange(., time, .by_group=TRUE)
+
+########### LOOP BACK! -RENAME TO EMAd.nm FOR REMAKING THE PLOTS WITH THIS DATA
+
+EMAd.nm <- EMA.merged
 
