@@ -453,6 +453,13 @@ sleep.diary <- readxl::read_excel("sleep diary.xlsx")
 
 
 
+
+
+
+
+
+
+
 #ICC
 psych::ICC(ISaffect, missing=TRUE)
 
