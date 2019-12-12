@@ -135,12 +135,9 @@ EMAd$disengagement[EMAd$EventBOO == "Yes" & is.na(EMAd$disengagement)==TRUE] <- 
 pairs(EMAd[20:25])
 
 # time for descriptives! :) ####
-## need to figure out how to model the time in, for now we need a TIMEPOINT variable to just order the variables for calculation ICC
 
 EMAd.nm <- EMAd[EMAd$status != "Expired" & EMAd$status != "Blocked",]
 
-#EMAd.nm IS ATM THE MERGED FILE !!###########################################################
-#############################################################################################
 
 #Retrospective event assessment as timepoint
 
@@ -382,6 +379,13 @@ plot6 <- ggplot(ISaff6, aes(x=time, y=value, color=variable))+
   annotate("text", label = ISaff6$ID, x = 10, y = 5)
 
 grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=3)
+
+
+
+
+
+
+
 
 
 #ICC
