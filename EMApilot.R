@@ -135,12 +135,9 @@ EMAd$disengagement[EMAd$EventBOO == "Yes" & is.na(EMAd$disengagement)==TRUE] <- 
 pairs(EMAd[20:25])
 
 # time for descriptives! :) ####
-## need to figure out how to model the time in, for now we need a TIMEPOINT variable to just order the variables for calculation ICC
 
 EMAd.nm <- EMAd[EMAd$status != "Expired" & EMAd$status != "Blocked",]
 
-#EMAd.nm IS ATM THE MERGED FILE !!###########################################################
-#############################################################################################
 
 #Retrospective event assessment as timepoint
 
@@ -168,7 +165,9 @@ EMA.merged <- EMA.merged %>%
   group_by(., ID) %>%
   arrange(., time, .by_group=TRUE)
 
-#########################################
+EMA.merged$ID <- recode(EMA.merged$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
+
+######################################### THIS TO -->
 
 testi1 <- EMA.merged %>%
   group_by(., ID) %>%
@@ -224,24 +223,32 @@ time.merge <- time.merge %>%
 time.merge$time <- as.factor(time.merge$time)
 
 ISaffectANNO <- left_join(ISaffectANNO, time.merge)
-
+### THIS IS BASICALLY USELESS AS WE HAVE EMA.merged ALREADY!
 
 #pd <- position_jitter(0.1, 0.1)
 pd <- position_dodge(0.1)
 #pd <- ggstance::position_dodgev(height = 0.2,)
 
 ISaffectANNO <- drop_na(ISaffectANNO)
-ISaffectANNO$ISvalence.jittered <- jitter(ISaffectANNO$ISvalence, amount=0)
+ISaffectANNO$ISvalence.jittered <- jitter(ISaffectANNO$ISvalence, amount=0.05)
 ISaffectANNO$ISarousal.jittered <- jitter(ISaffectANNO$ISarousal, amount=0.05)
 ISaffectANNO$ISdominance.jittered <- jitter(ISaffectANNO$ISdominance, amount=0.05)
 levels(ISaffectANNO$retro)
+
+EMA.merged$ISvalence.jittered <- jitter(EMA.merged$ISvalence, amount=0.05)
+EMA.merged$ISarousal.jittered <- jitter(EMA.merged$ISarousal, amount=0.05)
+EMA.merged$ISdominance.jittered <- jitter(EMA.merged$ISdominance, amount=0.05)
+EMA.merged$ISstress.jittered <- jitter(EMA.merged$ISstress, amount=0.05)
+EMA.merged$ISautonomy.jittered <- jitter(EMA.merged$ISautonomy, amount=0.05)
+EMA.merged$IScompetence.jittered <- jitter(EMA.merged$IScompetence, amount=0.05)
+EMA.merged$ISsocial.jittered <- jitter(EMA.merged$ISsocial, amount=0.05)
 
 plot1 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISvalence.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
   scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
   facet_grid(. ~ day, scales="free_x")+
-  theme(aspect.ratio = 0.9, legend.position = c(0.90,0.15), legend.direction = "horizontal")+
+  theme(aspect.ratio = 0.9, legend.position = c(1.5,0.15), legend.direction = "horizontal")+
   geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
                    aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
                    nudge_y=0.2, nudge_x = 1000)+
@@ -274,13 +281,60 @@ plot3 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISdominance.jittered, color=ID)
                    nudge_y=0.2, nudge_x = 1000)+
   ylim(-1,5)
 
-grid.arrange(plot1,plot2,plot3, nrow=3)
+plot4 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISstress.jittered, color=ID)) +
+  geom_line(aes(group=ID))+
+  geom_point(aes(group=ID))+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(aspect.ratio = 0.9, legend.position = "none")+
+  geom_label_repel(data=subset(EMA.merged, retro=="event"),
+                   aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
+                   nudge_y=0.2, nudge_x = 1000)+
+  ylim(-1,101)
+
+plot5 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISautonomy.jittered, color=ID)) +
+  geom_line(aes(group=ID))+
+  geom_point(aes(group=ID))+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(aspect.ratio = 0.9, legend.position = "none")+
+  geom_label_repel(data=subset(EMA.merged, retro=="event"),
+                   aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
+                   nudge_y=0.2, nudge_x = 1000)+
+  ylim(-1,101)
+
+plot6 <- ggplot(EMA.merged, aes(x=timePOSIX, y=IScompetence.jittered, color=ID)) +
+  geom_line(aes(group=ID))+
+  geom_point(aes(group=ID))+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(aspect.ratio = 0.9, legend.position = "none")+
+  geom_label_repel(data=subset(EMA.merged, retro=="event"),
+                   aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
+                   nudge_y=0.2, nudge_x = 1000)+
+  ylim(-1,101)
+
+plot7 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISsocial.jittered, color=ID)) +
+  geom_line(aes(group=ID))+
+  geom_point(aes(group=ID))+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(aspect.ratio = 0.9, legend.position = "none")+
+  geom_label_repel(data=subset(EMA.merged, retro=="event"),
+                   aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
+                   nudge_y=0.2, nudge_x = 1000)+
+  ylim(-1,101)
+
+grid.arrange(plot7, plot2, plot3, plot4, plot5, plot6, plot1, nrow=4, ncol=2)
 
 #geom_text(aes(label=hms::as.hms(timePOSIX)),hjust=0, vjust=0, size=3)
 #scale_x_time(breaks = hms::as.hms(ISaffectANNO$timePOSIX), date_breaks())
 
 ##problem: positioning fucks up lines and points  
   
+
+## THESE PLOTS ARE NOT NEEDED ####
+
 plot1 <- ggplot(ISaffectANNO, aes(x=time, y=ISvalence, color=ID))+
   geom_line(aes(group=ID), position=pd)+
   geom_point(position=pd)+
@@ -304,22 +358,28 @@ plot3 <- ggplot(ISaffectANNO, aes(x=time, y=ISdominance, color=ID))+
 
 grid.arrange(plot1,plot2,plot3, ncol=3)
 
+## END OF THESE PLOTS ARE NOT NEEDED ###
 
 #per subject
 
-ISaff1 <- filter(ISaffect, ID == "19350")
-ISaff1 <- gather(ISaff1, "variable", "value", 3:5)
-ISaff1$variable <- type.convert(ISaff1$variable)
-ISaff1$variable <- factor(ISaff1$variable, levels = c("ISvalence", "ISarousal", "ISdominance"))
+subj1 <- filter(EMA.merged, ID == "19350")
+subj1 <- select(subj1, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
+subj1 <- gather(subj1, "variable", "value", 5:11)
+subj1$variable <- type.convert(subj1$variable)
+subj1$variable <- factor(subj1$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
+subj1 <- subj1 %>%
+  group_by(., variable) %>%
+  mutate(value=scale(value)) %>%
+  mutate(value=jitter(value, amount=0.05))
 
-pd <- position_jitter(0.05, 0.05)
+plot1 <- ggplot(subj1, aes(x=timePOSIX, y=value, color=variable)) +
+  geom_line(aes(group=variable, linetype=variable))+
+  geom_vline(data=subset(subj1, retro=="event"), aes(xintercept=as.numeric(c(timePOSIX))), linetype="dashed")+
+  geom_point(aes(group=variable))+
+  scale_x_datetime(breaks="1 hour", date_labels="%H")+
+  facet_grid(. ~ day, scales="free_x")
 
-plot1 <- ggplot(ISaff1, aes(x=time, y=value, color=variable))+
-  geom_line(aes(group=variable), position=pd)+
-  geom_point(aes(group=variable), position=pd) + 
-  ylim(-1,5)+
-  theme(legend.position="none")+
-  annotate("text", label = ISaff1$ID, x = 10, y = 5)
+
 
 ISaff2 <- filter(ISaffect, ID == "19427")
 ISaff2 <- gather(ISaff2, "variable", "value", 3:5)
@@ -382,6 +442,15 @@ plot6 <- ggplot(ISaff6, aes(x=time, y=value, color=variable))+
   annotate("text", label = ISaff6$ID, x = 10, y = 5)
 
 grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=3)
+
+## Add sleep diary and oura data to data set ####
+
+sleep.diary <- readxl::read_excel("sleep diary.xlsx")
+
+
+
+
+
 
 
 #ICC
