@@ -5,6 +5,14 @@ if (!require(lubridate)) {install.packages('lubridate')}
 if (!require(hms)) {install.packages('hms')}
 if (!require(ggstance)) {install.packages('ggstance')}
 if (!require(ggrepel)) {install.packages('ggrepel')}
+if (!require(janitor)) {install.packages('janitor')}
+if (!require(psych)) {install.packages('psych')}
+if (!require(rstan)) {install.packages('rstan')}
+if (!require(ctsem)) {install.packages('ctsem')}
+
+
+#colorblind friendly palette
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 
 EMAd <- read.csv2("survey_responses_4865.csv")
@@ -133,7 +141,7 @@ EMAd$disengagement[EMAd$EventBOO == "Yes" & is.na(EMAd$disengagement)==TRUE] <- 
 
 
 pairs(EMAd[20:25])
-
+pairs.panels(EMAd[20:25])
 # time for descriptives! :) ####
 
 EMAd.nm <- EMAd[EMAd$status != "Expired" & EMAd$status != "Blocked",]
@@ -248,7 +256,7 @@ plot1 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISvalence.jittered, color=ID)) 
   geom_point(aes(group=ID))+
   scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
   facet_grid(. ~ day, scales="free_x")+
-  theme(aspect.ratio = 0.9, legend.position = c(1.5,0.15), legend.direction = "horizontal")+
+  theme(aspect.ratio = 0.9, legend.position = "none")+
   geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
                    aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
                    nudge_y=0.2, nudge_x = 1000)+
@@ -319,13 +327,13 @@ plot7 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISsocial.jittered, color=ID)) +
   geom_point(aes(group=ID))+
   scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
   facet_grid(. ~ day, scales="free_x")+
-  theme(aspect.ratio = 0.9, legend.position = "none")+
+  theme(aspect.ratio = 0.9, legend.position = c(1.5,0.15), legend.direction = "horizontal")+
   geom_label_repel(data=subset(EMA.merged, retro=="event"),
                    aes(label=retro), size=2.5, alpha=0.6, label.padding=0.2,
                    nudge_y=0.2, nudge_x = 1000)+
   ylim(-1,101)
 
-grid.arrange(plot7, plot2, plot3, plot4, plot5, plot6, plot1, nrow=4, ncol=2)
+grid.arrange(plot1, plot2, plot3, plot4, plot5, plot6, plot7, nrow=4, ncol=2)
 
 #geom_text(aes(label=hms::as.hms(timePOSIX)),hjust=0, vjust=0, size=3)
 #scale_x_time(breaks = hms::as.hms(ISaffectANNO$timePOSIX), date_breaks())
@@ -373,92 +381,176 @@ subj1 <- subj1 %>%
   mutate(value=jitter(value, amount=0.05))
 
 plot1 <- ggplot(subj1, aes(x=timePOSIX, y=value, color=variable)) +
-  geom_line(aes(group=variable, linetype=variable))+
+  geom_line(aes(group=variable),alpha=0.6)+
   geom_vline(data=subset(subj1, retro=="event"), aes(xintercept=as.numeric(c(timePOSIX))), linetype="dashed")+
-  geom_point(aes(group=variable))+
+  geom_point(aes(group=variable), size=3, alpha=0.6)+
   scale_x_datetime(breaks="1 hour", date_labels="%H")+
-  facet_grid(. ~ day, scales="free_x")
+  facet_grid(. ~ day, scales="free_x")+
+  theme(legend.position = "none", aspect.ratio = 0.9)+
+  scale_colour_manual(values=cbPalette)+
+  ylim(-4,4)
+
+subj2 <- filter(EMA.merged, ID == "19427")
+subj2 <- select(subj2, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
+subj2 <- gather(subj2, "variable", "value", 5:11)
+subj2$variable <- type.convert(subj2$variable)
+subj2$variable <- factor(subj2$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
+subj2 <- subj2 %>%
+  group_by(., variable) %>%
+  mutate(value=scale(value)) %>%
+  mutate(value=jitter(value, amount=0.05))
+
+plot2 <- ggplot(subj2, aes(x=timePOSIX, y=value, color=variable)) +
+  geom_line(aes(group=variable),alpha=0.7)+
+  geom_vline(data=subset(subj2, retro=="event"), aes(xintercept=as.numeric(c(timePOSIX))), linetype="longdash")+
+  geom_point(aes(group=variable), size=3,alpha=0.7)+
+  scale_x_datetime(breaks="1 hour", date_labels="%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(legend.position = c(0.7,0.2), legend.direction = "horizontal",legend.title = element_blank(),
+        legend.key = element_rect(colour = "transparent", fill = "white"), legend.background=element_blank(), aspect.ratio = 0.9)+
+  scale_colour_manual(values=cbPalette)+
+  ylim(-4, 4)
 
 
+subj3 <- filter(EMA.merged, ID == "19436")
+subj3 <- select(subj3, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
+subj3 <- gather(subj3, "variable", "value", 5:11)
+subj3$variable <- type.convert(subj3$variable)
+subj3$variable <- factor(subj3$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
+subj3 <- subj3 %>%
+  group_by(., variable) %>%
+  mutate(value=scale(value)) %>%
+  mutate(value=jitter(value, amount=0.05))
 
-ISaff2 <- filter(ISaffect, ID == "19427")
-ISaff2 <- gather(ISaff2, "variable", "value", 3:5)
-ISaff2$variable <- type.convert(ISaff2$variable)
-ISaff2$variable <- factor(ISaff2$variable, levels = c("ISvalence", "ISarousal", "ISdominance"))
+plot3 <- ggplot(subj3, aes(x=timePOSIX, y=value, color=variable)) +
+  geom_line(aes(group=variable), alpha=0.7)+
+  geom_vline(data=subset(subj3, retro=="event"), aes(xintercept=as.numeric(c(timePOSIX))), linetype="dashed")+
+  geom_point(aes(group=variable), size=3, alpha=0.7)+
+  scale_x_datetime(breaks="1 hour", date_labels="%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(legend.position = "none", aspect.ratio = 0.9)+
+  scale_colour_manual(values=cbPalette)+
+  ylim(-4, 4)
 
-plot2 <- ggplot(ISaff2, aes(x=time, y=value, color=variable))+
-  geom_line(aes(group=variable), position=pd)+
-  geom_point(aes(group=variable), position=pd) + 
-  ylim(-1,5)+
-  theme(legend.position="none")+
-  annotate("text", label = ISaff2$ID, x = 10, y = 5)
 
-ISaff3 <- filter(ISaffect, ID == "19436")
-ISaff3 <- gather(ISaff3, "variable", "value", 3:5)
-ISaff3$variable <- type.convert(ISaff3$variable)
-ISaff3$variable <- factor(ISaff3$variable, levels = c("ISvalence", "ISarousal", "ISdominance"))
+subj4 <- filter(EMA.merged, ID == "19444")
+subj4 <- select(subj4, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
+subj4 <- gather(subj4, "variable", "value", 5:11)
+subj4$variable <- type.convert(subj4$variable)
+subj4$variable <- factor(subj4$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
+subj4 <- subj4 %>%
+  group_by(., variable) %>%
+  mutate(value=scale(value)) %>%
+  mutate(value=jitter(value, amount=0.05))
 
-plot3 <- ggplot(ISaff3, aes(x=time, y=value, color=variable))+
-  geom_line(aes(group=variable), position=pd)+
-  geom_point(aes(group=variable), position=pd) + 
-  ylim(-1,5)+
-  theme(legend.position="none")+
-  annotate("text", label = ISaff3$ID, x = 10, y = 5)
+plot4 <- ggplot(subj4, aes(x=timePOSIX, y=value, color=variable)) +
+  geom_line(aes(group=variable), alpha=0.7)+
+  geom_vline(data=subset(subj4, retro=="event"), aes(xintercept=as.numeric(c(timePOSIX))), linetype="dashed")+
+  geom_point(aes(group=variable), size=3, alpha=0.7)+
+  scale_x_datetime(breaks="1 hour", date_labels="%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(legend.position = "none", aspect.ratio = 0.9)+
+  scale_colour_manual(values=cbPalette)+
+  ylim(-4, 4)
 
-ISaff4 <- filter(ISaffect, ID == "19444")
-ISaff4 <- gather(ISaff4, "variable", "value", 3:5)
-ISaff4$variable <- type.convert(ISaff4$variable)
-ISaff4$variable <- factor(ISaff4$variable, levels = c("ISvalence", "ISarousal", "ISdominance"))
+subj5 <- filter(EMA.merged, ID == "19445")
+subj5 <- select(subj5, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
+subj5 <- gather(subj5, "variable", "value", 5:11)
+subj5$variable <- type.convert(subj5$variable)
+subj5$variable <- factor(subj5$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
+subj5 <- subj5 %>%
+  group_by(., variable) %>%
+  mutate(value=scale(value)) %>%
+  mutate(value=jitter(value, amount=0.05))
 
-plot4 <- ggplot(ISaff4, aes(x=time, y=value, color=variable))+
-  geom_line(aes(group=variable), position=pd)+
-  geom_point(aes(group=variable), position=pd) + 
-  ylim(-1,5)+
-  theme(legend.position="none")+
-  annotate("text", label = ISaff4$ID, x = 10, y = 5)
+plot5 <- ggplot(subj5, aes(x=timePOSIX, y=value, color=variable)) +
+  geom_line(aes(group=variable), alpha=0.7)+
+  geom_vline(data=subset(subj5, retro=="event"), aes(xintercept=as.numeric(c(timePOSIX))), linetype="dashed")+
+  geom_point(aes(group=variable), size=3, alpha=0.7)+
+  scale_x_datetime(breaks="1 hour", date_labels="%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(legend.position = "none", aspect.ratio = 0.9)+
+  scale_colour_manual(values=cbPalette)+
+  ylim(-4, 4)
 
-ISaff5 <- filter(ISaffect, ID == "19445")
-ISaff5 <- gather(ISaff5, "variable", "value", 3:5)
-ISaff5$variable <- type.convert(ISaff5$variable)
-ISaff5$variable <- factor(ISaff5$variable, levels = c("ISvalence", "ISarousal", "ISdominance"))
+subj6 <- filter(EMA.merged, ID == "19453")
+subj6 <- select(subj6, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
+subj6 <- gather(subj6, "variable", "value", 5:11)
+subj6$variable <- type.convert(subj6$variable)
+subj6$variable <- factor(subj6$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
+subj6 <- subj6 %>%
+  group_by(., variable) %>%
+  mutate(value=scale(value)) %>%
+  mutate(value=jitter(value, amount=0.05))
 
-plot5 <- ggplot(ISaff5, aes(x=time, y=value, color=variable))+
-  geom_line(aes(group=variable), position=pd)+
-  geom_point(aes(group=variable), position=pd) + 
-  ylim(-1,5)+
-  theme(legend.position="none")+
-  annotate("text", label = ISaff5$ID, x = 10, y = 5)
+plot6 <- ggplot(subj6, aes(x=timePOSIX, y=value, color=variable)) +
+  geom_line(aes(group=variable), alpha=0.7)+
+  geom_vline(data=subset(subj6, retro=="event"), aes(xintercept=as.numeric(c(timePOSIX))), linetype="dashed")+
+  geom_point(aes(group=variable),size=3, alpha=0.7)+
+  scale_x_datetime(breaks="1 hour", date_labels="%H")+
+  facet_grid(. ~ day, scales="free_x")+
+  theme(legend.position = "none", aspect.ratio = 0.9)+
+  scale_colour_manual(values=cbPalette)+
+  ylim(-4, 4)
 
-ISaff6 <- filter(ISaffect, ID == "19453")
-ISaff6 <- gather(ISaff6, "variable", "value", 3:5)
-ISaff6$variable <- type.convert(ISaff6$variable)
-ISaff6$variable <- factor(ISaff6$variable, levels = c("ISvalence", "ISarousal", "ISdominance"))
-
-plot6 <- ggplot(ISaff6, aes(x=time, y=value, color=variable))+
-  geom_line(aes(group=variable), position=pd)+
-  geom_point(aes(group=variable), position=pd) + 
-  ylim(-1,5)+
-  theme(legend.position=c(0.88,0.15))+
-  annotate("text", label = ISaff6$ID, x = 10, y = 5)
-
-grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=3)
+  grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=2)
 
 ## Add sleep diary and oura data to data set ####
 
+#sleep diary data convert ###
+
 sleep.diary <- readxl::read_excel("sleep diary.xlsx")
+sleep.diary[,c(1,2)] <- sleep.diary[,c(1,2)] %>% mutate_if(sapply(., is.double), as.factor)
+sleep.diary$typical.BOO <- as.factor(sleep.diary$typical.BOO)
+sleep.diary$sleep.time.est <- as.POSIXct(sleep.diary$sleep.time.est)
+sleep.diary$wake.time.est <- as.POSIXct(sleep.diary$wake.time.est)
 
 
+#baseline questionnaire data convert ###
+
+baseline <- read.csv2("baseline.csv")
+baseline <- as_tibble(baseline)
+baseline <- rename(baseline, ID = SubjectNumber.1)
+baseline <- rename(baseline, autonomy = BPNSNF.3, compe = BPNSNF.7, support = BPNSNF.12)
+colnames(baseline)[6:32] <- c("SNF.1",  "SNF.2",  "autonomy",  "SNF.3",  "SNF.4",  "SNF.5",  "compe", "SNF.6",  "SNF.7", "SNF.8", "SNF.9", "support", 
+                              "SNF.10", "SNF.11", "SNF.12", "SNF.13", "SNF.14", "SNF.15", "SNF.16", "SNF.17", "SNF.18", "SNF.19", "SNF.20", "SNF.21", 
+                              "SNF.22", "SNF.23", "SNF.24")
 
 
+baseline <- baseline %>%
+  group_by(., ID) %>%
+  mutate(., autoSAT = (SNF.1+SNF.7+SNF.13+SNF.19)/4, autoFRU = (SNF.2+SNF.8+SNF.14+SNF.20)/4, relaSAT = (SNF.3+SNF.9+SNF.15+SNF.21)/4, 
+         relaFRU = (SNF.4+SNF.10+SNF.16+SNF.22)/4, compSAT = (SNF.5+SNF.11+SNF.17+SNF.23)/4, compFRU = (SNF.6+SNF.12+SNF.18+SNF.24)/4)
+pairs.panels(baseline[, 36:41])
+cor(baseline[, c("SNF.1","SNF.7","SNF.13", "SNF.19", "SNF.2", "SNF.8", "SNF.14", "SNF.20", "autonomy")])
 
 
+outlier <- filter(baseline, ID != 19350)
+
+alpha(as.data.frame(baseline[,c("SNF.4", "SNF.10", "SNF.16", "SNF.22")]), check.keys = TRUE)
+
+#items 3 7 12 are momentary
 
 
+#Oura data convert ###
+
+oura <- readxl::read_excel("Oura combined.xlsx")
+
+oura[, c(1, 2, 3)] <- oura[, c(1, 2, 3)] %>%
+  mutate_if(sapply(., is.character), as.factor)
+
+oura$ID <- as.factor(oura$ID) 
+oura$`BedTime Start` <- excel_numeric_to_date(as.numeric(oura$`BedTime Start`), include_time = TRUE)
+oura$`Bedtime End` <-  excel_numeric_to_date(as.numeric(oura$`Bedtime End`), include_time = TRUE)
+
+oura <- oura %>%
+mutate_if(sapply(., is.character), as.numeric)
 
 
+### CTSEM ####
 
 
-
+#########################################################################################
 
 #ICC
 psych::ICC(ISaffect, missing=TRUE)
