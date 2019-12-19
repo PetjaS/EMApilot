@@ -545,6 +545,7 @@ oura$`Bedtime End` <-  excel_numeric_to_date(as.numeric(oura$`Bedtime End`), inc
 
 oura <- oura %>%
 mutate_if(sapply(., is.character), as.numeric)
+<<<<<<< HEAD
 wtf <- oura[order(oura$ID, oura$day, decreasing=FALSE),]
 wtf <- select(wtf, ID, day, `Awake Time`)
 wtf$join <- paste(1)
@@ -599,7 +600,14 @@ longexample <- ctWideToLong(datawide = wide, Tpoints = 23, n.manifest = 7, n.TDp
 ctEMAlong <- ctDeintervalise(datalong = longexample, id='id', dT='dT')
 
 ##weird error -> contact Driver
+=======
 
+
+### CTSEM ####
+
+>>>>>>> acd841fb9f87c2e0a2d2e119ee4035b37bc37385
+
+#########################################################################################
 
 example1model <- ctModel(type='stanct',
                            n.latent=7, latentNames=c('eta1','eta2', "eta3", "eta4", "eta5", "eta6", "eta7"),
