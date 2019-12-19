@@ -9,6 +9,7 @@ if (!require(janitor)) {install.packages('janitor')}
 if (!require(psych)) {install.packages('psych')}
 if (!require(rstan)) {install.packages('rstan')}
 if (!require(ctsem)) {install.packages('ctsem')}
+if (!require(googledrive)) {install.packages('googledrive')}
 
 
 #colorblind friendly palette
@@ -545,10 +546,10 @@ oura$`Bedtime End` <-  excel_numeric_to_date(as.numeric(oura$`Bedtime End`), inc
 
 oura <- oura %>%
 mutate_if(sapply(., is.character), as.numeric)
-<<<<<<< HEAD
 wtf <- oura[order(oura$ID, oura$day, decreasing=FALSE),]
 wtf <- select(wtf, ID, day, `Awake Time`)
 wtf$join <- paste(1)
+
 ### CTSEM ####
 
 ctEMA <- EMA.merged %>%
@@ -600,14 +601,7 @@ longexample <- ctWideToLong(datawide = wide, Tpoints = 23, n.manifest = 7, n.TDp
 ctEMAlong <- ctDeintervalise(datalong = longexample, id='id', dT='dT')
 
 ##weird error -> contact Driver
-=======
 
-
-### CTSEM ####
-
->>>>>>> acd841fb9f87c2e0a2d2e119ee4035b37bc37385
-
-#########################################################################################
 
 example1model <- ctModel(type='stanct',
                            n.latent=7, latentNames=c('eta1','eta2', "eta3", "eta4", "eta5", "eta6", "eta7"),
@@ -617,13 +611,22 @@ example1model <- ctModel(type='stanct',
                            n.TIpred=6, TIpredNames=c("autoSAT", "autoFRU", "relaSAT", "relaFRU", "compSAT", "compFRU"),
                            LAMBDA=diag(7))
 
-example1fit <- ctStanFit(datalong = ctEMAlong, ctstanmodel = example1model, optimize=FALSE,verbose=1, iter = 100, chains = 1)
+#example1fit <- ctStanFit(datalong = ctEMAlong, ctstanmodel = example1model, optimize=FALSE, iter = 1000, chains = 3)
 
+#saveRDS(example1fit, "pilot run 1000it.rds")
+#find and download the file from google drive using drive_ls(path="EMA pilot")
 
+summary <- summary(example1fit)
+
+summary(example1fit, parmatrices=TRUE)$parmatrices
+
+options(max.print=10000)
+
+ctStanContinuousPars(example1fit,subjects = "all", calcfunc = quantile, calcfuncargs = list(probs=.975)) 
 
 ######################################################################################################################################################
 
-#ICC
+#ICC####
 psych::ICC(ISaffect, missing=TRUE)
 getwd()
 
@@ -643,7 +646,6 @@ spread(testi1, time, ISvalence)
 
 
 
-##### ADD RETROSPECTIVE TIMEPOINTS AS OBSERVATIONS ########
 
 
 
