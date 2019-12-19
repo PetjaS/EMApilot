@@ -375,7 +375,6 @@ subj1 <- filter(EMA.merged, ID == "19350")
 subj1 <- select(subj1, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
 subj1 <- gather(subj1, "variable", "value", 5:11)
 subj1$variable <- type.convert(subj1$variable)
-subj1$variable <- factor(subj1$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
 subj1 <- subj1 %>%
   group_by(., variable) %>%
   mutate(value=scale(value)) %>%
@@ -395,7 +394,6 @@ subj2 <- filter(EMA.merged, ID == "19427")
 subj2 <- select(subj2, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
 subj2 <- gather(subj2, "variable", "value", 5:11)
 subj2$variable <- type.convert(subj2$variable)
-subj2$variable <- factor(subj2$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
 subj2 <- subj2 %>%
   group_by(., variable) %>%
   mutate(value=scale(value)) %>%
@@ -417,7 +415,6 @@ subj3 <- filter(EMA.merged, ID == "19436")
 subj3 <- select(subj3, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
 subj3 <- gather(subj3, "variable", "value", 5:11)
 subj3$variable <- type.convert(subj3$variable)
-subj3$variable <- factor(subj3$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
 subj3 <- subj3 %>%
   group_by(., variable) %>%
   mutate(value=scale(value)) %>%
@@ -438,7 +435,6 @@ subj4 <- filter(EMA.merged, ID == "19444")
 subj4 <- select(subj4, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
 subj4 <- gather(subj4, "variable", "value", 5:11)
 subj4$variable <- type.convert(subj4$variable)
-subj4$variable <- factor(subj4$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
 subj4 <- subj4 %>%
   group_by(., variable) %>%
   mutate(value=scale(value)) %>%
@@ -458,7 +454,6 @@ subj5 <- filter(EMA.merged, ID == "19445")
 subj5 <- select(subj5, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
 subj5 <- gather(subj5, "variable", "value", 5:11)
 subj5$variable <- type.convert(subj5$variable)
-subj5$variable <- factor(subj5$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
 subj5 <- subj5 %>%
   group_by(., variable) %>%
   mutate(value=scale(value)) %>%
@@ -478,7 +473,6 @@ subj6 <- filter(EMA.merged, ID == "19453")
 subj6 <- select(subj6, ID, timePOSIX, day, retro, ISvalence, ISarousal, ISdominance, ISstress, ISautonomy, IScompetence, ISsocial)
 subj6 <- gather(subj6, "variable", "value", 5:11)
 subj6$variable <- type.convert(subj6$variable)
-subj6$variable <- factor(subj6$variable, levels = c("ISvalence", "ISarousal", "ISdominance", "ISsocial", "ISstress", "ISvalence"))
 subj6 <- subj6 %>%
   group_by(., variable) %>%
   mutate(value=scale(value)) %>%
@@ -581,6 +575,8 @@ ctEMAdat <- select(ctEMAdat, "id", "time", "ISvalence", "ISarousal", "ISdominanc
                    "autoSAT", "autoFRU", "relaSAT", "relaFRU", "compSAT", "compFRU")
 ctEMAdat$time <- type.convert(ctEMAdat$time)
 ctEMAdat[3:27] <- lapply(ctEMAdat[3:27], function(x) c(scale(x)))
+ctEMAdat$time <- ctEMAdat$time/60 #from sec to min
+ctEMAdat$time <- ctEMAdat$time/60 #from min to h (for some reason ctsem prefers avg time interval to be <3)
 
 wideexample <- ctLongToWide(datalong = ctEMAdat, id = "id",
                             time = "time", manifestNames = c("ISvalence", "ISarousal", "ISdominance", "ISstress", "ISautonomy", "IScompetence", "ISsocial"),
@@ -623,6 +619,37 @@ summary(example1fit, parmatrices=TRUE)$parmatrices
 options(max.print=10000)
 
 ctStanContinuousPars(example1fit,subjects = "all", calcfunc = quantile, calcfuncargs = list(probs=.975)) 
+
+fit2s <- extract(fit20)
+mean(fit2s$MANIFESTMEANS)
+
+fit1 <- readRDS("pilot1000iter.rds")
+fit2 <- readRDS("02pilotrun1000it.rds") #does not work
+
+
+model02 <- ctModel(type='stanct',
+                   n.latent=3, latentNames=c('eta1','eta2', "eta3"),
+                   n.manifest=3, manifestNames=c("ISvalence", "ISarousal", "ISdominance"),
+                   n.TDpred=1, TDpredNames="Awake Time", 
+                   n.TIpred=1, TIpredNames="autoSAT",
+                   LAMBDA=diag(3))
+
+fit2 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model02, optimize=FALSE, iter = 100, chains = 1, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE)
+
+summary(fit2)
+
+fit3 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model02, optimize=FALSE, iter = 100, chains = 1, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE, control = list(adapt_delta = .95))
+efit3 <- extract(fit3)
+
+model03 <- ctModel(type='stanct',
+                   n.latent=3, latentNames=c('eta1','eta2', "eta3"),
+                   n.manifest=3, manifestNames=c("ISvalence", "ISarousal", "ISdominance"),
+                   n.TDpred=0, 
+                   n.TIpred=1, TIpredNames="autoSAT",
+                   LAMBDA=diag(3))
+
+fit4 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model03, optimize=FALSE, iter = 100, chains = 2, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE, control = list(adapt_delta = .95))
+
 
 ######################################################################################################################################################
 
