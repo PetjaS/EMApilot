@@ -611,6 +611,9 @@ example1model <- ctModel(type='stanct',
 
 #saveRDS(example1fit, "pilot run 1000it.rds")
 #find and download the file from google drive using drive_ls(path="EMA pilot")
+#drive_ls(path="EMA pilot")
+#drive_download("pilot1000ite.rds")
+#example1fit <- readRDS("pilot1000iter.rds")
 
 summary <- summary(example1fit)
 
@@ -650,6 +653,40 @@ model03 <- ctModel(type='stanct',
 
 fit4 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model03, optimize=FALSE, iter = 100, chains = 2, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE, control = list(adapt_delta = .95))
 
+lp <- extract(example1fit$stanfit)$lp__
+
+lp <-  as.data.frame(lp)
+hist(popmeans$V5)
+hist(lp$lp)
+
+stanf <- example1fit$stanfit
+
+ctStanContinuousPars(example1fit,subjects = "all", calcfunc = quantile, calcfuncargs = list(probs=.975)) 
+
+traceplot(example1fit$stanfit, pars = c("DRIFT[1,1,1]","DRIFT[1,2,1]","DRIFT[1,1,2]"))
+
+plot.ctsemfit()
+
+plotz <- ctStanDiscretePars(example1fit, indices = "CR", times = seq(from = 0, to = 2, by = 0.1), plot = TRUE)
+ctStanDiscreteParsPlot(plotz, indices = "AR")
+ctStanDiscretePars(example1fit)
+
+ctKalman(example1fit, timerange = "asdata",
+         timestep = "asdata", subjects = 5, plot = TRUE, kalmanvecc("y", "ysmooth"), legend=FALSE)
+ctKalman(example1fit, subjects=1, kalmanvec=c('y', 'etaprior'), plot=TRUE, plotcontrol=list(xaxs='i', main = 'Predicted'))
+
+
+
+example2model <- ctModel(type='stanct',
+                         n.latent=3, latentNames=c('eta1','eta2', "eta3"),
+                         n.manifest=3, manifestNames=c("ISvalence", "ISarousal", "ISdominance"),
+                         n.TDpred=1, TDpredNames= "Awake Time", 
+                         n.TIpred=2, TIpredNames=c("autoSAT", "autoFRU"),
+                         LAMBDA=diag(3))
+
+example2fit <- ctStanFit(datalong = ctEMAlong, ctstanmodel = example2model, optimize=FALSE, iter = 1000, chains = 3)
+
+saveRDS(example2fit, "02pilotrun1000it.rds")
 
 ######################################################################################################################################################
 
