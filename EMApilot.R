@@ -615,6 +615,8 @@ example1model <- ctModel(type='stanct',
 #drive_download("pilot1000ite.rds")
 #example1fit <- readRDS("pilot1000iter.rds")
 
+#very useful names(extract(fit4$stanfit)) -> can see "pars" to use in eg pairs() or traceplot()fit
+
 summary <- summary(example1fit)
 
 summary(example1fit, parmatrices=TRUE)$parmatrices
@@ -634,7 +636,7 @@ model02 <- ctModel(type='stanct',
                    n.latent=3, latentNames=c('eta1','eta2', "eta3"),
                    n.manifest=3, manifestNames=c("ISvalence", "ISarousal", "ISdominance"),
                    n.TDpred=1, TDpredNames="Awake Time", 
-                   n.TIpred=1, TIpredNames="autoSAT",
+                   n.TIpred=1, TIpredNames="compSAT",
                    LAMBDA=diag(3))
 
 fit2 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model02, optimize=FALSE, iter = 100, chains = 1, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE)
@@ -648,12 +650,23 @@ model03 <- ctModel(type='stanct',
                    n.latent=3, latentNames=c('eta1','eta2', "eta3"),
                    n.manifest=3, manifestNames=c("ISvalence", "ISarousal", "ISdominance"),
                    n.TDpred=0, 
-                   n.TIpred=1, TIpredNames="autoSAT",
+                   n.TIpred=1, TIpredNames="compSAT",
                    LAMBDA=diag(3))
 
-fit4 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model03, optimize=FALSE, iter = 100, chains = 2, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE, control = list(adapt_delta = .95))
+fit4 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model03, optimize=FALSE, iter = 300, chains = 3, cores ="maxneeded", plot=TRUE, control = list(adapt_delta = .99))
 
-lp <- extract(example1fit$stanfit)$lp__
+model04 <- ctModel(type='stanct',
+                   n.latent=1, latentNames='eta1',
+                   n.manifest=1, manifestNames="ISvalence",
+                   n.TDpred=0, 
+                   n.TIpred=0, TIpredNames="compSAT",
+                   LAMBDA=diag(1))
+
+fit5 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model04, optimize=FALSE, iter = 300, chains = 3, cores ="maxneeded", plot=TRUE, control = list(adapt_delta = .99))
+
+### TÄSSÄ MENNÄÄN ###
+
+molp <- extract(example1fit$stanfit)$lp__
 
 lp <-  as.data.frame(lp)
 hist(popmeans$V5)
@@ -671,9 +684,9 @@ plotz <- ctStanDiscretePars(example1fit, indices = "CR", times = seq(from = 0, t
 ctStanDiscreteParsPlot(plotz, indices = "AR")
 ctStanDiscretePars(example1fit)
 
-ctKalman(example1fit, timerange = "asdata",
+ctStanKalman(example1fit, timerange = "asdata",
          timestep = "asdata", subjects = 5, plot = TRUE, kalmanvecc("y", "ysmooth"), legend=FALSE)
-ctKalman(example1fit, subjects=1, kalmanvec=c('y', 'etaprior'), plot=TRUE, plotcontrol=list(xaxs='i', main = 'Predicted'))
+ctStanKalman(example1fit, subjects=1, kalmanvec=c('y', 'etaprior'), plot=TRUE, plotcontrol=list(xaxs='i', main = 'Predicted'))
 
 
 
