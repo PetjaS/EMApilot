@@ -616,6 +616,8 @@ example1model <- ctModel(type='stanct',
 #example1fit <- readRDS("pilot1000iter.rds")
 
 #very useful names(extract(fit4$stanfit)) -> can see "pars" to use in eg pairs() or traceplot()fit
+#launch_shinystan(fit4$stanfit)
+#print(fit5$stanfit, pars=ctStanParnames(fit5, "pop_")) #stanfit object has many additional parameters, hence pars
 
 summary <- summary(example1fit)
 
@@ -686,7 +688,7 @@ ctStanDiscretePars(example1fit)
 
 ctStanKalman(example1fit, timerange = "asdata",
          timestep = "asdata", subjects = 5, plot = TRUE, kalmanvecc("y", "ysmooth"), legend=FALSE)
-ctStanKalman(example1fit, subjects=1, kalmanvec=c('y', 'etaprior'), plot=TRUE, plotcontrol=list(xaxs='i', main = 'Predicted'))
+ctKalman(fit5, subjects = 6, kalmanvec=c('y', 'etaprior'), plot=TRUE, plotcontrol=list(xaxs='i', main = 'Predicted'))
 
 
 
