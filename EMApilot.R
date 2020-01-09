@@ -576,7 +576,6 @@ ctEMAdat <- select(ctEMAdat, "id", "time", "ISvalence", "ISarousal", "ISdominanc
 ctEMAdat$time <- type.convert(ctEMAdat$time)
 ctEMAdat[3:27] <- lapply(ctEMAdat[3:27], function(x) c(scale(x)))
 ctEMAdat$time <- ctEMAdat$time/60 #from sec to min
-ctEMAdat$time <- ctEMAdat$time/60 #from min to h (for some reason ctsem prefers avg time interval to be <3)
 
 wideexample <- ctLongToWide(datalong = ctEMAdat, id = "id",
                             time = "time", manifestNames = c("ISvalence", "ISarousal", "ISdominance", "ISstress", "ISautonomy", "IScompetence", "ISsocial"),
@@ -597,6 +596,7 @@ longexample <- ctWideToLong(datawide = wide, Tpoints = 23, n.manifest = 7, n.TDp
 ctEMAlong <- ctDeintervalise(datalong = longexample, id='id', dT='dT')
 
 ##weird error -> contact Driver
+#saveRDS(ctEMAlong, "ctEMAlong.rds")
 
 
 example1model <- ctModel(type='stanct',
@@ -630,8 +630,8 @@ ctStanContinuousPars(example1fit,subjects = "all", calcfunc = quantile, calcfunc
 fit2s <- extract(fit20)
 mean(fit2s$MANIFESTMEANS)
 
-fit1 <- readRDS("pilot1000iter.rds")
-fit2 <- readRDS("02pilotrun1000it.rds") #does not work
+#fit1 <- readRDS("pilot1000iter.rds")
+#fit2 <- readRDS("02pilotrun1000it.rds") #does not work
 
 
 model02 <- ctModel(type='stanct',
@@ -641,30 +641,36 @@ model02 <- ctModel(type='stanct',
                    n.TIpred=1, TIpredNames="compSAT",
                    LAMBDA=diag(3))
 
-fit2 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model02, optimize=FALSE, iter = 100, chains = 1, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE)
+#fit2 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model02, optimize=FALSE, iter = 100, chains = 1, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE)
 
 summary(fit2)
 
-fit3 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model02, optimize=FALSE, iter = 100, chains = 1, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE, control = list(adapt_delta = .95))
+#fit3 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model02, optimize=FALSE, iter = 100, chains = 1, cores ="maxneeded", savesubjectmatrices= TRUE, verbose=0, plot=TRUE, control = list(adapt_delta = .95))
 efit3 <- extract(fit3)
 
-model03 <- ctModel(type='stanct',
-                   n.latent=3, latentNames=c('eta1','eta2', "eta3"),
-                   n.manifest=3, manifestNames=c("ISvalence", "ISarousal", "ISdominance"),
-                   n.TDpred=0, 
-                   n.TIpred=1, TIpredNames="compSAT",
-                   LAMBDA=diag(3))
+model3 <- ctModel(type='stanct',
+                   latentNames=c('eta1',"eta2"),
+                   manifestNames=c("Y1", "Y2"),
+                   CINT=matrix(c("cint1", "cint2"), nrow=2, ncol=1),
+                   MANIFESTMEANS=matrix(c(0,0),nrow=2,ncol=1),
+                   TDpredNames="TD1",
+                   TIpredName="TI1",
+                   LAMBDA=diag(2))
 
-fit4 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model03, optimize=FALSE, iter = 300, chains = 3, cores ="maxneeded", plot=TRUE, control = list(adapt_delta = .99))
+model3$pars$indvarying[7] <- TRUE
+model3$pars$transform[7] <- "2*param-1" #allowing for positive auto-effects -> explosive growth, but still negative offset (so process declines after spike)
+plot(model3, rows=7, rawpopsd=2)
 
-model04 <- ctModel(type='stanct',
+fit4 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model3, optimize=FALSE, iter = 300, chains = 3, cores ="maxneeded", plot=TRUE, control = list(adapt_delta = .99))
+
+model4 <- ctModel(type='stanct',
                    n.latent=1, latentNames='eta1',
                    n.manifest=1, manifestNames="ISvalence",
                    n.TDpred=0, 
-                   n.TIpred=0, TIpredNames="compSAT",
+                   n.TIpred=1, TIpredNames="compSAT",
                    LAMBDA=diag(1))
 
-fit5 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model04, optimize=FALSE, iter = 300, chains = 3, cores ="maxneeded", plot=TRUE, control = list(adapt_delta = .99))
+fit5 <- ctStanFit(datalong = ctEMAlong, ctstanmodel = model4, optimize=FALSE, iter = 300, chains = 1, cores ="maxneeded", plot=TRUE)
 
 ### TÄSSÄ MENNÄÄN ###
 
