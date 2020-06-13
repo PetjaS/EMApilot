@@ -10,6 +10,7 @@ if (!require(psych)) {install.packages('psych')}
 if (!require(rstan)) {install.packages('rstan')}
 if (!require(ctsem)) {install.packages('ctsem')}
 if (!require(googledrive)) {install.packages('googledrive')}
+if (!require(gridExtra)) {install.packages('gridExtra')} #alternatively cowplot
 
 
 #colorblind friendly palette
@@ -32,6 +33,8 @@ EMAd$day[grepl("2019-11-26",EMAd$time)] <- 1
 EMAd$day[grepl("2019-11-27",EMAd$time)] <- 2
 EMAd$day[grepl("2019-11-28",EMAd$time)] <- 3
 EMAd$day[grepl("2019-11-29",EMAd$time)] <- 4
+
+#fix in situ (IS) variables
 
 levels(EMAd$ISvalence) <- c("2", "0", "1", "2", "3", "4", "1", "2", "3", "4")
 levels(EMAd$ISarousal) <- c("2", "1", "2", "3", "1", "2", "3")
@@ -56,30 +59,71 @@ EMAd$ISdominance[34] <- 2
 EMAd$status <- sapply(EMAd$status, as.character)
 EMAd$status[34] <- 0
 
-if (!require(gridExtra)) {install.packages('gridExtra')} #alternatively cowplot
+
+#loop for plotting variables
+
+#multiplot function (from cookbook) ####
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
 
 
-plot1 <- ggplot(EMAd, aes(EMAd$ISvalence))+
-  geom_bar()+
-  scale_x_continuous(limits=c(-1,5), breaks=c(0,1,2,3,4))
+# loop for plotting variables ####
 
-plot2 <- ggplot(EMAd, aes(EMAd$ISarousal))+
-  geom_bar()+
-  scale_x_continuous(limits=c(-1,5), breaks=c(0,1,2,3,4))
+plotHistFunc <- function(x, na.rm = TRUE, ...) {
+  plot_list <- list()
+  vars <- names(x)
+  for (i in seq_along(vars)) {
+    plot_list[[i]] <- ggplot(x,aes_string(x = vars[i])) + geom_histogram(alpha = .5,fill = "mediumseagreen")
+  }
+  columnsToPlot <- floor(sqrt(ncol(x)))
+  multiplot(plotlist = plot_list, cols = columnsToPlot)
+    }
 
-plot3 <- ggplot(EMAd, aes(EMAd$ISdominance))+
-  geom_bar()+
-  scale_x_continuous(limits=c(-1,5), breaks=c(0,1,2,3,4))
+plotHistFunc(EMAd[,4:10])
 
-#ggplot returns warning for the missing values
 
-grid.arrange(plot1,plot2,plot3, ncol=3)
+#more data wrangling ####
+#check data is correct 
 
 levels(EMAd$EventBOO) <- c("No","Yes","No")
 nrow(EMAd[EMAd$EventBOO=="Yes",])
 #13 is correct
 
-#Recall emotion state variables
+#Recall(R) emotion state variables
 
 levels(EMAd$Rvalence) <- c("2", "0", "3", "4", "0", "1", "3", "4")
 levels(EMAd$Rarousal) <- c("2", "1", "3", "4", "1", "3")
@@ -96,22 +140,10 @@ EMAd$Rarousal[EMAd$EventBOO=="No"] <- NA
 EMAd$Rdominance[EMAd$EventBOO=="No"] <- NA
 
 
-plot1 <- ggplot(EMAd, aes(EMAd$Rvalence))+
-  geom_bar()+
-  scale_x_continuous(limits=c(-1,5), breaks=c(0,1,2,3,4))
+plotHistFunc(EMAd[,13:18])
 
-plot2 <- ggplot(EMAd, aes(EMAd$Rarousal))+
-  geom_bar()+
-  scale_x_continuous(limits=c(-1,5), breaks=c(0,1,2,3,4))
 
-plot3 <- ggplot(EMAd, aes(EMAd$Rdominance))+
-  geom_bar()+
-  scale_x_continuous(limits=c(-1,5), breaks=c(0,1,2,3,4))
-
-#ggplot returns warning for the missing values
-
-grid.arrange(plot1,plot2,plot3, ncol=3)
-
+# answer input status  variables ####
 EMAd[EMAd$status == c("Blocked","Expired"),]
 
 #Fix initial values for stress and needs variables
@@ -143,7 +175,9 @@ EMAd$disengagement[EMAd$EventBOO == "Yes" & is.na(EMAd$disengagement)==TRUE] <- 
 
 pairs(EMAd[20:25])
 pairs.panels(EMAd[20:25])
-# time for descriptives! :) ####
+
+
+# Descriptive statistics ####
 
 EMAd.nm <- EMAd[EMAd$status != "Expired" & EMAd$status != "Blocked",]
 
@@ -176,73 +210,11 @@ EMA.merged <- EMA.merged %>%
 
 EMA.merged$ID <- recode(EMA.merged$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
 
-######################################### THIS TO -->
-
-testi1 <- EMA.merged %>%
-  group_by(., ID) %>%
-  mutate(TP = seq(1:length(ID)))
-
-ok <- select(testi1, TP,retro)
-names(ok)[names(ok) == "TP"] <- "time"
-ok$time <- as.factor(ok$time)
-ok$ID <- recode(ok$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
-ok$time <- factor(ok$time, levels = ok$time[1:23])
-
-
-testi12 <- select(testi1, ID, TP, ISvalence, ISarousal, ISdominance, retro, day)
-
-#create dataframe where you can easily plot all variables from
-
-testi12$ID <- recode(testi12$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
-
-
-ISaffect <- valence <- testi12 %>%
-  select(., ID, TP, ISvalence) %>%
-  spread(., TP, ISvalence) %>%
-  gather(time, ISvalence, 2:24, factor_key=FALSE)
-
-#old 2:21
-
-
-arousal <- testi12 %>%
-  select(., ID, TP, ISarousal) %>%
-  spread(., TP, ISarousal) %>%
-  gather(time, ISarousal, 2:24, factor_key=FALSE)
-
-dominance <- testi12 %>%
-  select(., ID, TP, ISdominance) %>%
-  spread(., TP, ISdominance) %>%
-  gather(time, ISdominance, 2:24, factor_key=FALSE)
-
-ISaffect$ISarousal <- arousal$ISarousal
-ISaffect$ISdominance <- dominance$ISdominance
-
-ISaffect <- ISaffect[order(ISaffect$ID),]
-ISaffect$time <- as.factor(ISaffect$time)
-ISaffect$time <- factor(ISaffect$time, levels = ISaffect$time[1:23])
-
-ISaffectANNO <- full_join(ISaffect, ok)
-colnames(EMA.merged)[2] <- "timePOSIX"
-
-time.merge <- select(EMA.merged, ID, timePOSIX, day)
-time.merge$ID <- recode(time.merge$ID, "User #19350" = "19350", "User #19427" = "19427", "User #19436" = "19436", "User #19444" = "19444", "User #19445" = "19445", "User #19453" = "19453")
-time.merge <- time.merge %>%
-  group_by(., ID) %>%
-  mutate(time = row_number())
-time.merge$time <- as.factor(time.merge$time)
-
-ISaffectANNO <- left_join(ISaffectANNO, time.merge)
-### THIS IS BASICALLY USELESS AS WE HAVE EMA.merged ALREADY!
 
 #pd <- position_jitter(0.1, 0.1)
 pd <- position_dodge(0.1)
 #pd <- ggstance::position_dodgev(height = 0.2,)
 
-ISaffectANNO <- drop_na(ISaffectANNO)
-ISaffectANNO$ISvalence.jittered <- jitter(ISaffectANNO$ISvalence, amount=0.05)
-ISaffectANNO$ISarousal.jittered <- jitter(ISaffectANNO$ISarousal, amount=0.05)
-ISaffectANNO$ISdominance.jittered <- jitter(ISaffectANNO$ISdominance, amount=0.05)
-levels(ISaffectANNO$retro)
 
 EMA.merged$ISvalence.jittered <- jitter(EMA.merged$ISvalence, amount=0.05)
 EMA.merged$ISarousal.jittered <- jitter(EMA.merged$ISarousal, amount=0.05)
@@ -252,10 +224,13 @@ EMA.merged$ISautonomy.jittered <- jitter(EMA.merged$ISautonomy, amount=0.05)
 EMA.merged$IScompetence.jittered <- jitter(EMA.merged$IScompetence, amount=0.05)
 EMA.merged$ISsocial.jittered <- jitter(EMA.merged$ISsocial, amount=0.05)
 
-plot1 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISvalence.jittered, color=ID)) +
+
+#plots for the merged data
+
+plot1 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISvalence.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
-  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H", name="time in hours (per day)")+
   facet_grid(. ~ day, scales="free_x")+
   theme(aspect.ratio = 0.9, legend.position = "none")+
   geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
@@ -271,7 +246,7 @@ plot1 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISvalence.jittered, color=ID)) 
 plot2 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISarousal.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
-  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H", name="time in hours (per day)")+
   facet_grid(. ~ day, scales="free_x")+
   theme(aspect.ratio = 0.9, legend.position="none")+
   geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
@@ -282,7 +257,7 @@ plot2 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISarousal.jittered, color=ID)) 
 plot3 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISdominance.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
-  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H", name="time in hours (per day)")+
   facet_grid(. ~ day, scales="free_x")+
   theme(aspect.ratio = 0.9, legend.position = "none")+
   geom_label_repel(data=subset(ISaffectANNO, retro=="event"),
@@ -293,7 +268,7 @@ plot3 <- ggplot(ISaffectANNO, aes(x=timePOSIX, y=ISdominance.jittered, color=ID)
 plot4 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISstress.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
-  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H", name="time in hours (per day)")+
   facet_grid(. ~ day, scales="free_x")+
   theme(aspect.ratio = 0.9, legend.position = "none")+
   geom_label_repel(data=subset(EMA.merged, retro=="event"),
@@ -304,7 +279,7 @@ plot4 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISstress.jittered, color=ID)) +
 plot5 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISautonomy.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
-  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H", name="time in hours (per day)")+
   facet_grid(. ~ day, scales="free_x")+
   theme(aspect.ratio = 0.9, legend.position = "none")+
   geom_label_repel(data=subset(EMA.merged, retro=="event"),
@@ -315,7 +290,7 @@ plot5 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISautonomy.jittered, color=ID)) +
 plot6 <- ggplot(EMA.merged, aes(x=timePOSIX, y=IScompetence.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
-  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H", name="time in hours (per day)")+
   facet_grid(. ~ day, scales="free_x")+
   theme(aspect.ratio = 0.9, legend.position = "none")+
   geom_label_repel(data=subset(EMA.merged, retro=="event"),
@@ -326,7 +301,7 @@ plot6 <- ggplot(EMA.merged, aes(x=timePOSIX, y=IScompetence.jittered, color=ID))
 plot7 <- ggplot(EMA.merged, aes(x=timePOSIX, y=ISsocial.jittered, color=ID)) +
   geom_line(aes(group=ID))+
   geom_point(aes(group=ID))+
-  scale_x_datetime(breaks = "1 hour", date_labels = "%H")+
+  scale_x_datetime(breaks = "1 hour", date_labels = "%H", name="time in hours (per day)")+
   facet_grid(. ~ day, scales="free_x")+
   theme(aspect.ratio = 0.9, legend.position = c(1.5,0.15), legend.direction = "horizontal")+
   geom_label_repel(data=subset(EMA.merged, retro=="event"),
@@ -342,32 +317,6 @@ grid.arrange(plot1, plot2, plot3, plot4, plot5, plot6, plot7, nrow=4, ncol=2)
 ##problem: positioning fucks up lines and points  
   
 
-## THESE PLOTS ARE NOT NEEDED ####
-
-plot1 <- ggplot(ISaffectANNO, aes(x=time, y=ISvalence, color=ID))+
-  geom_line(aes(group=ID), position=pd)+
-  geom_point(position=pd)+
-  ylim(-1,5)+
-  theme(legend.position = "none")+
-  geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=0)
-
-plot2 <- ggplot(ISaffectANNO, aes(x=time, y=ISarousal, color=ID))+
-  geom_line(aes(group=ID), position=pd)+
-  geom_point(position=pd)+
-  ylim(-1,5) + 
-  theme(legend.position = "none")+
-  geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=0)
-
-plot3 <- ggplot(ISaffectANNO, aes(x=time, y=ISdominance, color=ID))+
-  geom_line(aes(group=ID), position=pd)+
-  geom_point(position=pd)+
-  ylim(-1,5)+
-  theme(legend.position = c(0.9,0.1))+
-  geom_text(aes(label=ifelse(retro=="retro",as.character("event"),'')),hjust=0,vjust=0)
-
-grid.arrange(plot1,plot2,plot3, ncol=3)
-
-## END OF THESE PLOTS ARE NOT NEEDED ###
 
 #per subject
 
@@ -490,7 +439,7 @@ plot6 <- ggplot(subj6, aes(x=timePOSIX, y=value, color=variable)) +
 
   grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=2)
 
-## Add sleep diary and oura data to data set ####
+## Add sleep diary and oura data to data set #####
 
 #sleep diary data convert ###
 
@@ -544,7 +493,7 @@ wtf <- oura[order(oura$ID, oura$day, decreasing=FALSE),]
 wtf <- select(wtf, ID, day, `Awake Time`)
 wtf$join <- paste(1)
 
-### CTSEM ####
+################################## CTSEM ####
 
 ctEMA <- EMA.merged %>%
   group_by(., ID) %>%
@@ -595,7 +544,7 @@ longexample <- ctWideToLong(datawide = wide, Tpoints = 23, n.manifest = 7, n.TDp
 
 ctEMAlong <- ctDeintervalise(datalong = longexample, id='id', dT='dT')
 
-##weird error -> contact Driver
+##weird error (bug?) -> contact Charles Driver
 #saveRDS(ctEMAlong, "ctEMAlong.rds")
 
 
@@ -709,101 +658,8 @@ example2fit <- ctStanFit(datalong = ctEMAlong, ctstanmodel = example2model, opti
 
 saveRDS(example2fit, "02pilotrun1000it.rds")
 
-######################################################################################################################################################
-
-#ICC####
-psych::ICC(ISaffect, missing=TRUE)
-getwd()
-
-
-
-icc()
-EMAd.nm <- EMAd[EMAd$status != "Expired" & EMAd$status != "Blocked",]
-str(EMAd.nm$ID)
-
-dcast(EMAd.nm, ID ~ time, value.var="ISvalence")
-
-
-testi1 <- EMAd.nm[c(1,2,4)]
-
-
-spread(testi1, time, ISvalence)
 
 
 
 
-
-
-############################ ROSKAKORI ###########################
-
-EMAd %>% 
-  filter(., EMAd$status == "Blocked")
-         & is.na(EMAd$ISstress)) 
-
-
-na_if(.$ISvalence==2)
-
-EMAd$status == "Expired"
-
-mutate(ISstress = replace_na(ISstress,50))
-
-head(EMAd)
-
-str(EMAd$time)
-
-filter(., EMAd$status!="Expired" & EMAd$status != "Blocked") %>%
-  mutate(ISstress = replace_na(ISstress,50))
-
-EMAd[EMAd$EventBOO=="Yes",]
-
-
-testi12 <- spread(testi12, TP, ISvalence)
-testi12 <- as.data.frame(testi12)
-testi12 <- testi12[2:21]
-colnames(testi12) <- paste("T", 1:20, sep="")
-rownames(testi12) <- paste("S", 1:6, sep="")
-testi121 <- testi12[,1:11]
-
-testi12$ID <- seq(1:6)
-testi12w <- gather(testi12, time, ISvalence, 1:20, factor_key=FALSE)
-testi12w <- testi12w[order(testi12w$ID),]
-testi12w$time <- as.factor(testi12w$time)
-testi12w$time <- factor(testi12w$time, levels = testi12w$time[1:20])
-testi12w$ID <- as.factor(testi12w$ID)
-
-pd <- position_jitter(0.1, 0.1)
-
-ggplot(testi12w, aes(x=time, y=ISvalence, color=ID))+
-  geom_line(aes(group=ID), position=pd)+
-  geom_point(position=pd)
-
-
-### tarkkana alla olevan kanssa
-#EMA1 <- EMAd.nm
-
-#EMA1$time <- as.POSIXlt(EMA1$time)
-#EMA1$TimeSinceEvent <- EMA1$TimeSinceEvent * 60
-#EMA1$newtime <- EMA1$time-EMA1$TimeSinceEvent
-
-#EMA1r <- EMA1[c(1,11:33)]
-#EMA1r <- filter(EMA1r, EMA1r$EventBOO == "Yes")
-
-#oldnames <- c("Rvalence", "Rarousal", "Rdominance", "Rstress", "Rautonomy", "Rcompentece", "Rsocial", "newtime")
-#newnames <- c("ISvalence", "ISarousal", "ISdominance", "ISstress", "ISautonomy", "IScompetence", "ISsocial", "time")
-
-#EMA1r <- EMA1r %>% rename_at(vars(oldnames), ~ newnames)
-#EMA1r$time <- as.POSIXct(EMA1r$time)
-#EMA1$time <- as.POSIXct(EMA1$time)
-#EMA1r$retro <- paste("retro")
-#EMA1$retro <- paste("in.situ")
-#EMA.merged <- full_join(EMA1, EMA1r)
-#EMA.merged[EMA.merged$retro=="retro",]
-
-#EMA.merged <- EMA.merged %>%
-  #group_by(., ID) %>%
-  #arrange(., time, .by_group=TRUE)
-
-########### LOOP BACK! -RENAME TO EMAd.nm FOR REMAKING THE PLOTS WITH THIS DATA
-
-#EMAd.nm <- EMA.merged
 
